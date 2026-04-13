@@ -40,5 +40,6 @@ All GitHub interactions use **SSH-based authentication**.
 
 ```bash
 ssh -T git@github.com
+```
 
 Expected response: `Hi <username>! You've successfully authenticated, but GitHub does not provide shell access.`
