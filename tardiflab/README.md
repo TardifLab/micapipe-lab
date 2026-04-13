@@ -154,15 +154,15 @@ MICAPIPE_PROFILE=dsA ./micapipe.sh sub-001
 Profiles are intended to live in:
 
 ```text
-config/profiles/
+tardiflab/profiles/
 ```
 
 Each dataset should have its own profile directory, for example:
 
 ```text
-config/profiles/dsA/
-config/profiles/dsB/
-config/profiles/dsC/
+tardiflab/profiles/dsA/
+tardiflab/profiles/dsB/
+tardiflab/profiles/dsC/
 ```
 
 ### Typical profile contents
@@ -189,20 +189,22 @@ An example layout for `micapipe-lab` is:
 
 ```text
 micapipe-lab/
-├── core/
-├── config/
-│   └── profiles/
-│       ├── dsA/
-│       │   ├── init.sh
-│       │   ├── utilities.sh
-│       │   ├── registration.sh
-│       │   └── params.sh
-│       ├── dsB/
-│       └── dsC/
-├── lab_ext/
-├── docs/
-├── README.md
-└── micapipe.sh
+├── micapipe.sh/
+├── core/ <upstream micapipe files and folders>
+├── tardiflab/
+│   ├── README.md
+│   ├── docs/
+│   ├── lab_ext/
+│   ├── profiles/
+│   │   ├── dsA/
+│   │   │   ├── init.sh
+│   │   │   ├── utilities.sh
+│   │   │   ├── registration.sh
+│   │   │   └── params.sh
+│   │   ├── dsB/
+│   │   └── dsC/
+│   ├── scripts/
+│   └── templates/
 ```
 
 ### Role of each area
@@ -210,7 +212,7 @@ micapipe-lab/
 - `core/`  
   Shared pipeline logic and generic extension points
 
-- `config/profiles/`  
+- `profiles/`  
   Dataset-specific configuration and overrides
 
 - `lab_ext/`  
