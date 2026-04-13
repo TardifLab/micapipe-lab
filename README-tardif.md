@@ -1,8 +1,8 @@
 # micapipe-lab
 
-This repository is the **canonical lab-maintained micapipe codebase for the Tardif Lab**. It is intended to support multiple datasets through a shared core pipeline and dataset-specific profiles.
+This repository is the **central micapipe codebase for the Tardiflab**. It is intended to support multiple datasets through a shared core pipeline and dataset-specific profiles.
 
-The long-term goal of `micapipe-lab` is to:
+Long-term goals:
 
 - maintain a single shared codebase for lab development
 - reduce duplication across project-specific pipeline copies
@@ -12,16 +12,12 @@ The long-term goal of `micapipe-lab` is to:
 
 ---
 
-## Repository Philosophy
+## Repository Core Method 
 
-Historically, different datasets in the lab have used their own customized micapipe installations. This was workable in the short term, but it made source control, maintenance, and eventual upstream integration more difficult.
+To acheive these goals:
 
-`micapipe-lab` is intended to replace that pattern with the following approach:
-
-- **one shared lab codebase**
-- **dataset-specific profiles**
-- **minimal, generic core modifications**
-- **most dataset-specific behavior isolated outside the core**
+- all core modifications should be **minimal and generic**,
+- and most dataset-specific behavior should be **isolated outside the core**
 
 In this model:
 
@@ -34,7 +30,7 @@ In this model:
 
 ## Development vs. Execution
 
-We follow a **clear separation between development and pipeline execution**.
+This seection clarifies the distinction between **development and pipeline execution**.
 
 ### Development
 
@@ -71,12 +67,12 @@ Dataset-specific behavior should be controlled by **profiles**, not by maintaini
 
 All GitHub interactions for this repository use **SSH-based authentication**.
 
-### Authentication policy
+### Authentication
 
-- No shared lab GitHub account should be used
-- No shared password or shared personal access token should be used
-- Pushes should be attributable to individual users
-- Access should be managed through GitHub repository permissions
+- No shared lab GitHub account is used
+- No shared password or shared personal access token is used
+- Pushes are attributable to individual users
+- Access is managed through GitHub repository permissions
 
 ### Developer requirements
 
@@ -111,7 +107,7 @@ Some users may have multiple SSH keys on the lab server. In that case, the appro
 
 This repository should be configured with two Git remotes:
 
-- `origin` → the Tardif Lab repository
+- `origin` → the Tardiflab repository
 - `upstream` → the official micapipe repository
 
 Example:
@@ -187,9 +183,9 @@ A profile may contain some or all of the following files:
 
 ---
 
-## Proposed Repository Structure
+## Example Repository Structure
 
-A possible high-level layout for `micapipe-lab` is:
+An example layout for `micapipe-lab` is:
 
 ```text
 micapipe-lab/
@@ -208,8 +204,6 @@ micapipe-lab/
 ├── README.md
 └── micapipe.sh
 ```
-
-This is only a conceptual structure and can be adapted to match the actual micapipe layout.
 
 ### Role of each area
 
@@ -388,18 +382,14 @@ This repository is being established while several project-specific micapipe var
 
 The recommended migration path is:
 
-1. keep the existing project-specific versions working for now
-2. create and stabilize `micapipe-lab`
-3. choose one existing dataset installation as the first migration target
-4. identify:
+1. preserve the existing project-specific version 
+2. ensure `micapipe-lab` is stable
+3. For this migration target, identify:
    - shared logic that belongs in the core
    - dataset-specific logic that belongs in a profile
    - one-off hacks that should be retired
-5. create the first working profile
-6. compare outputs against the legacy pipeline
-7. gradually migrate other datasets into the shared structure
-
-This migration should be incremental rather than all-at-once.
+4. create the working profile
+5. compare outputs against the legacy pipeline
 
 ---
 
@@ -441,7 +431,7 @@ Recommended practice:
 
 It is useful to distinguish between:
 
-### The canonical lab repository
+### The central lab repository
 
 The GitHub repository `TardifLab/micapipe-lab` is the lab’s source of truth.
 
@@ -467,24 +457,7 @@ This model helps separate:
 
 ---
 
-## Current Status
-
-At present:
-
-- the lab repository has been created
-- the shared server clone has been established
-- Git remotes are configured for both `origin` and `upstream`
-- SSH authentication for pushing has been validated
-
-The next major implementation step is to begin defining the first dataset profile and the minimal profile-loading mechanism in the shared pipeline.
-
----
-
-## Notes for Future Cleanup
-
-This README is intended to capture the current working plan for `micapipe-lab`. It will likely evolve as the repository structure becomes more concrete.
-
-Possible future additions:
+## Possible Future Additions
 
 - exact profile-loading syntax
 - profile templates
