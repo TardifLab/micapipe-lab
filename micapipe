@@ -210,6 +210,10 @@ http://mica-mni.github.io/
 MICAPIPE=$(dirname $(realpath "$0"))
 source "${MICAPIPE}/functions/utilities.sh"
 
+# *TL* Load dataset profile
+source "${MICAPIPE}/tardiflab/profile_loader.sh"
+micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_UTILS}"
+
 # -----------------------------------------------------------------------------------------------#
 #			ARGUMENTS
 # Create VARIABLES
@@ -668,6 +672,9 @@ if [ -z ${MF} ]; then MF=3; else MF="${MF}"; fi
 # Processed DWI
 if [ -z ${dwi_processed} ]; then dwi_processed="FALSE"; else  dwi_processed=$(realpath $dwi_processed); fi
 
+# *TL* Load profile-specific parameters
+micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_PARAMS}"
+
 # -----------------------------------------------------------------------------------------------#
 Title "MICA pipeline - (Version $Version) \n\t\tSubject: $id Session: $SES"
 
@@ -676,6 +683,9 @@ Title "MICA pipeline - (Version $Version) \n\t\tSubject: $id Session: $SES"
 if [ "$micaq" = "TRUE" ] || [ "$qall" = "TRUE" ] || [ "$mica" = "TRUE" ]; then
     source "${MICAPIPE}/functions/init.sh" "$threads"
 else
+
+# *TL* Optional profile-specific init file
+micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_INIT}"
 
     # -----------------------------------------------------------------------------------------------#
     #   CHECK PACKAGES DEPENDENCIES
