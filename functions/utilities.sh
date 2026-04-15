@@ -1186,3 +1186,29 @@ function steps() {
   Note "N     :" "${N}"
   Note "Nsteps:" "${Nsteps}"
 }
+
+
+# -------------------------------------------------------------------------
+# *TL*  Tardiflab extension: profile loader + utilities override
+# This allows dataset-specific overrides to be applied after the default
+# micapipe utilities are loaded.
+# -------------------------------------------------------------------------
+
+# Only proceed if MICAPIPE is defined and a profile is requested
+if [[ -n "${MICAPIPE:-}" && -n "${MICAPIPE_PROFILE:-}" ]]; then
+
+    TL_PROFILE_LOADER="${MICAPIPE}/tardiflab/core/profile_loader.sh"
+
+    # Source profile loader if it exists
+    if [[ -f "${TL_PROFILE_LOADER}" ]]; then
+        # shellcheck disable=SC1090
+        source "${TL_PROFILE_LOADER}"
+
+        # Source profile-specific utilities override if available
+        if command -v micapipe_profile_source_if_exists >/dev/null 2>&1; then
+            micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_UTILS}"
+        fi
+    else
+        echo "[WARNING] TardifLab profile loader not found: ${TL_PROFILE_LOADER}" >&2
+    fi
+fi
