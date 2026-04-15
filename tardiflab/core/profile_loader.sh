@@ -9,6 +9,13 @@
 # 2026 Mark C Nelson MNI
 #------------------------------------------------------------------------------------------------------------------------------------
 
+echo "[profile_loader.sh] loaded" >&2
+
+# --- This causes problems sometimes
+## Check if profile_loader already sourced
+#if [[ "${MICAPIPE_PROFILE_LOADER_INITIALIZED:-0}" == "1" ]]; then
+#    return 0
+#fi
 
 # Guard against accidental execution instead of sourcing
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -42,6 +49,7 @@ export MICAPIPE_PROFILE_INIT=""
 export MICAPIPE_PROFILE_UTILS=""
 export MICAPIPE_PROFILE_PARAMS=""
 export MICAPIPE_PROFILE_MODULES=""
+export MICAPIPE_PROFILE_DATASET=""
 
 # Helper: whether a profile is active
 micapipe_profile_enabled() {
@@ -93,6 +101,7 @@ if [[ -n "${MICAPIPE_PROFILE:-}" ]]; then
     export MICAPIPE_PROFILE_UTILS="${MICAPIPE_PROFILE_DIR}/utilities.sh"
     export MICAPIPE_PROFILE_PARAMS="${MICAPIPE_PROFILE_DIR}/params.sh"
     export MICAPIPE_PROFILE_MODULES="${MICAPIPE_PROFILE_DIR}/modules.sh"
+    export MICAPIPE_PROFILE_DATASET="${MICAPIPE_PROFILE_DIR}/dataset.sh"
 
     # Common-sense checks
     # 1) profile name should not contain path separators
@@ -105,9 +114,15 @@ if [[ -n "${MICAPIPE_PROFILE:-}" ]]; then
     if [[ ! -f "${MICAPIPE_PROFILE_INIT}" && \
           ! -f "${MICAPIPE_PROFILE_UTILS}" && \
           ! -f "${MICAPIPE_PROFILE_PARAMS}" && \
-          ! -f "${MICAPIPE_PROFILE_MODULES}" ]]; then
+          ! -f "${MICAPIPE_PROFILE_MODULES}" && \
+          ! -f "${MICAPIPE_PROFILE_DATASET}" ]]; then
         echo "WARNING: Profile '${MICAPIPE_PROFILE_NAME}' exists but contains no recognized profile files." >&2
     fi
 else
     _micapipe_profile_debug "No MICAPIPE_PROFILE set; using default micapipe behavior."
 fi
+
+# --- Removing this functionality for now
+# Declare profile loading complete (to avoid repeated sourcing)
+# Maybe remove later if we want profile_loader to load dataset-specific modules further down the line???
+#export MICAPIPE_PROFILE_LOADER_INITIALIZED=1
