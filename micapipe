@@ -207,12 +207,8 @@ http://mica-mni.github.io/
 }
 
 # Source utilities functions from MICAPIPE
-MICAPIPE=$(dirname $(realpath "$0"))
+export MICAPIPE=$(dirname $(realpath "$0"))
 source "${MICAPIPE}/functions/utilities.sh"
-
-# *TL* Load dataset profile
-source "${MICAPIPE}/tardiflab/profile_loader.sh"
-micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_UTILS}"
 
 # -----------------------------------------------------------------------------------------------#
 #			ARGUMENTS
@@ -672,8 +668,27 @@ if [ -z ${MF} ]; then MF=3; else MF="${MF}"; fi
 # Processed DWI
 if [ -z ${dwi_processed} ]; then dwi_processed="FALSE"; else  dwi_processed=$(realpath $dwi_processed); fi
 
-# *TL* Load profile-specific parameters
-micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_PARAMS}"
+
+# -------------------------------------------------------------------------
+# *TL* Tardiflab extension: optional profile params/init
+# utilities overrides are handled in functions/utilities.sh
+# -------------------------------------------------------------------------
+
+if [[ -n "${MICAPIPE:-}" && -n "${MICAPIPE_PROFILE:-}" ]]; then
+    TL_PROFILE_LOADER="${MICAPIPE}/tardiflab/core/profile_loader.sh"
+
+    if [[ -f "${TL_PROFILE_LOADER}" ]]; then
+        # shellcheck disable=SC1090
+        source "${TL_PROFILE_LOADER}"
+
+        if command -v micapipe_profile_source_if_exists >/dev/null 2>&1; then
+            micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_PARAMS}"
+            micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_INIT}"
+        fi
+    else
+        echo "[WARNING] TardifLab profile loader not found: ${TL_PROFILE_LOADER}" >&2
+    fi
+fi
 
 # -----------------------------------------------------------------------------------------------#
 Title "MICA pipeline - (Version $Version) \n\t\tSubject: $id Session: $SES"
@@ -683,9 +698,6 @@ Title "MICA pipeline - (Version $Version) \n\t\tSubject: $id Session: $SES"
 if [ "$micaq" = "TRUE" ] || [ "$qall" = "TRUE" ] || [ "$mica" = "TRUE" ]; then
     source "${MICAPIPE}/functions/init.sh" "$threads"
 else
-
-# *TL* Optional profile-specific init file
-micapipe_profile_source_if_exists "${MICAPIPE_PROFILE_INIT}"
 
     # -----------------------------------------------------------------------------------------------#
     #   CHECK PACKAGES DEPENDENCIES
