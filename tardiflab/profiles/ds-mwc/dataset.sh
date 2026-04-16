@@ -13,6 +13,15 @@ export BIDS_DIR="/data_/tardiflab/mwc/bids"
 export OUT_DIR="/data_/tardiflab/mwc/bids/derivatives/micapipe-lab"
 export LOG_DIR="/data_/tardiflab/mwc/bids/derivatives/micapipe-lab/logs"
 
+# Root containing externally generated FreeSurfer subject folders
+export EXTERNAL_SURF_ROOT="${BIDS_DIR}/derivatives/freesurfer"
+
+# Optional naming mode for subject folders inside EXTERNAL_SURF_ROOT
+# Expected values could be:
+#   bids        -> sub-01_ses-1
+#   bare        -> 01_ses-1
+export EXTERNAL_SURF_NAMING="bids"
+
 # Default subjects/sessions for launcher scripts
 DEFAULT_SUBJECTS=(01 02 03)
 DEFAULT_SESSIONS=(1)
