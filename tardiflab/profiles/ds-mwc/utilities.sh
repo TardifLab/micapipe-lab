@@ -68,9 +68,6 @@ export idBIDS="${subject}${ses}"
   export dir_warp=$subject_dir/xfm              # Transformation matrices
   export dir_logs=$subject_dir/logs              # directory with log files
   export dir_QC=$subject_dir/QC                  # directory with QC files
-  # *TL*
-  export dir_surf=${bids_derivs}/freesurfer                                     # surfaces
-  export dir_freesurfer=${dir_surf}/${idBIDS}                                   # freesurfer dir
 
   # post structural Files (the resolution might vary depending on the dataset)
   if [ -f "${proc_struct}"/"${idBIDS}"_space-nativepro_T1w.nii.gz ]; then
@@ -80,7 +77,6 @@ export idBIDS="${subject}${ses}"
       export T1nativepro_mask=${proc_struct}/${idBIDS}_space-nativepro_T1w_brain_mask.nii.gz
       export T15ttgen=${proc_struct}/${idBIDS}_space-nativepro_T1w_5tt.nii.gz
       export T1fast_seg=$subject_dir/parc/${idBIDS}_space-nativepro_T1w_atlas-subcortical.nii.gz
-      export T1freesurfr=${dir_freesurfer}/mri/brain.mgz   							# *TL*
   fi
 
   # Registration from MNI152 to Native pro
@@ -91,11 +87,7 @@ export idBIDS="${subject}${ses}"
   export MNI152_mask=${util_MNIvolumes}/MNI152_T1_0.8mm_brain_mask.nii.gz
 
 
-  # Native midsurface in gifti format *TL*
-  export lh_midsurf=${dir_freesurfer}/surf/lh.midthickness.surf.gii
-  export rh_midsurf=${dir_freesurfer}/surf/rh.midthickness.surf.gii
-
-  # BIDS Files: resting state
+  # BIDS Files: resting state *TL* variable overrides
   bids_mainScan=($(ls "${subject_bids}/func/${subject}${ses}"_task-rest_dir-AP_*bold.nii* 2>/dev/null))       	# main func scan
   bids_mainScanJson=($(ls "${subject_bids}/func/${subject}${ses}"_task-rest_dir-AP_*bold.json 2>/dev/null))   	# main func scan json
   bids_mainPhase=($(ls "${subject_bids}/fmap/${subject}${ses}"_task-rest_dir-AP_*epi.nii* 2>/dev/null))     	# main phase scan
@@ -111,7 +103,7 @@ export idBIDS="${subject}${ses}"
 
 
   # BIDS Files
-  # *TL*
+  # *TL* variable overrides
   bids_T1ws=($(ls "$subject_bids"/anat/*filtered*T1w.nii* 2>/dev/null))
   bids_dwis=($(ls "${subject_bids}/dwi/${subject}${ses}"*dwi.nii* 2>/dev/null))
   bids_T1map=$(ls "$subject_bids"/anat/*MP2RAGE*.nii* 2>/dev/null)
@@ -126,6 +118,20 @@ export idBIDS="${subject}${ses}"
   # BIDS Files
   bids_flair=$(ls "$subject_bids"/anat/*FLAIR*.nii* 2>/dev/null)
 }
+
+# *TL* variable overrides
+set_surface_directory() {
+  local recon=${1}
+  export dir_surf=${bids_derivs}/freesurfer                 	# Freesurfer dir
+  export dir_subjsurf=${dir_surf}/${idBIDS}  			# Subject surface dir
+  export T1surf=${dir_subjsurf}/mri/orig.mgz
+#  export T1surf=${dir_subjsurf}/mri/brain.mgz           	# T1w in freesurfer
+
+  # Native midsurface in gifti format
+  export lh_midsurf=${dir_subjsurf}/surf/lh.midthickness.surf.gii
+  export rh_midsurf=${dir_subjsurf}/surf/rh.midthickness.surf.gii
+}
+
 
 bids_print.variables() {
   # This functions prints BIDS variables names
@@ -155,7 +161,6 @@ bids_print.variables() {
   Note "dir_logs        :" "$dir_logs"
   Note "dir_QC          :" "$dir_QC"
   Note "dir_subjsurf    :" "$dir_subjsurf"
-  Note "dir_freesurfer  :" "$dir_freesurfer" 				# *TL*
 
   Info "Utilities directories"
   Note "scriptDir         :" "$scriptDir"
@@ -171,7 +176,6 @@ bids_print.variables-func() {
   Info "Variables for functional processing"
   Note "T1 nativepro       :" "$(find "$T1nativepro" 2>/dev/null)"
   Note "T1 surface      :" "$(find "$T1surf" 2>/dev/null)"
-  Note "T1 freesurfer      :" "$(find "$T1freesurfr" 2>/dev/null)" 			# *TL*
   for i in "${!mainScan[@]}"; do
   file.exist "mainScan${i/0/}         :" ${mainScan[i]}
   file.exist "mainScan${i/0/} json    :" ${mainScanJson[i]}
