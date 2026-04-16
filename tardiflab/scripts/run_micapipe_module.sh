@@ -101,6 +101,12 @@ if ! micapipe_profile_file_exists "${MICAPIPE_PROFILE_DATASET}"; then
   exit 1
 fi
 
+# Normalize IDs
+SUB="${SUB#sub-}"
+if [[ "${SES}" != ses-* ]]; then
+  SES="ses-${SES}"
+fi
+
 # shellcheck disable=SC1090
 source "${MICAPIPE_PROFILE_DATASET}"
 
@@ -109,17 +115,42 @@ source "${MICAPIPE_PROFILE_DATASET}"
 : "${OUT_DIR:?ERROR: OUT_DIR must be defined in ${MICAPIPE_PROFILE_DATASET}}"
 : "${LOG_DIR:?ERROR: LOG_DIR must be defined in ${MICAPIPE_PROFILE_DATASET}}"
 
-# Normalize IDs
-SUB="${SUB#sub-}"
-if [[ "${SES}" != ses-* ]]; then
-  SES="ses-${SES}"
+
+# Subject specific external freesurfer derivatives
+SUBJECT_SURF_DIR=""
+if [[ -n "${EXTERNAL_SURF_ROOT:-}" ]]; then
+  SUBJECT_SURF_DIR="$(resolve_subject_surf_dir)"
 fi
+
+
+# Helper to compute subject Freesurfer path
+resolve_subject_surf_dir() {
+  local sub_label="sub-${SUB}"
+  local ses_label="${SES}"
+
+  case "${EXTERNAL_SURF_NAMING:-bids}" in
+    bids)
+      printf '%s\n' "${EXTERNAL_SURF_ROOT}/${sub_label}_${ses_label}"
+      ;;
+    bare)
+      printf '%s\n' "${EXTERNAL_SURF_ROOT}/${SUB}_${ses_label}"
+      ;;
+    *)
+      echo "ERROR: unknown EXTERNAL_SURF_NAMING='${EXTERNAL_SURF_NAMING:-}'" >&2
+      return 1
+      ;;
+  esac
+}
+
 
 build_micapipe_args() {
   local module="$1"
   case "${module}" in
     volumetric)
       printf '%s\n' "-proc_structural"
+      ;;
+    proc_surf)
+      printf '%s\n' "-proc_surf" "-surf_dir" "${SUBJECT_SURF_DIR}"
       ;;
     post_structural)
       printf '%s\n' "-post_structural"
