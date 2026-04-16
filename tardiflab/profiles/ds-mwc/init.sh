@@ -22,11 +22,13 @@ echo "[ds-mwc init.sh] loaded" >&2
   export mrtrixDir=${softwareDir}/MRtrix_v3.0.4
   export AFNIDIR=${softwareDir}/afni
   export ANTSPATH=${softwareDir}/ANTs/bin
-  export workbench_path=${softwareDir}/workbench/bin_linux64
+  export workbench_path=${softwareDir}/workbench
   export FIXPATH=${softwareDir}/fix								# make sure fix knows where to find mcr (see fix/settings.sh, set FSL_FIX_MCRROOT variable)
 # export PYTHONPATH=${softwareDir}/anaconda3/bin
   export MATLABPATH=${softwareDir}/matlabLIBS                                                   # Originally was ${softwareDir}/matlab
   export RPATH=${softwareDir}/R 								# v3.6 is necessary for micapipe
+  export R_HOME=${RPATH}
+  export ICU60_DIR=${softwareDir}/icu60               						# this lib was missing from the R v3.6 package
 #  export RPATH=${softwareDir}/R-3.6.3/bin 							# this no longer exists
 #  export RPATH=/usr/bin/R 									# This is v4, which is not compatible with the packages necessary for micapipe
   export customBin=${softwareDir}/bin
@@ -35,9 +37,11 @@ echo "[ds-mwc init.sh] loaded" >&2
   export C3DPATH=${softwareDir}/c3d-1.0.0/bin
 
 # Freesurfer & Fastsurfer
-  export FREESURFER_HOME=${softwareDir}/freesurfer_v7
+#  export FREESURFER_HOME=${softwareDir}/freesurfer_v7
 #  export FASTSURFER_HOME=${softwareDir}/fastsurfer                  		# DONT HAVE THIS YET
-  export fs_licence=${softwareDir}/freesurfer_v7/license.txt
+#  export fs_licence=${softwareDir}/freesurfer_v7/license.txt
+  export FREESURFER_HOME=${softwareDir}/freesurfer_v7.3.2
+  export fs_licence=${FREESURFER_HOME}/license.txt
 # FSL
   export FSLDIR=${softwareDir}/fsl
   export FSL_DIR=${softwareDir}/fsl
@@ -65,18 +69,21 @@ LD_LIBRARY_PATH=$(IFS=':';p=($LD_LIBRARY_PATH);unset IFS;p=(${p[@]%%*conda*});IF
 
 #------------------------------------------------------------------------------#
 # Software configuration
+unset PYTHONPATH
+unset PYTHONHOME
+
 # FreeSurfer 6.0 configuration
 source "${FREESURFER_HOME}/FreeSurferEnv.sh"
 # FSL 6.0 configuration
 source "${FSLDIR}/etc/fslconf/fsl.sh"
-
 #------------------------------------------------------------------------------#
 
 # Export new PATH with all the necessary binaries
-  export PATH="${C3DPATH}:${MCRPATH}:${ANACONDA}:${customBin}:${MATLABPATH}:${RPATH}/bin:${AFNIDIR}:${ANTSPATH}:${workbench_path}:${FREESURFER_HOME}/bin:${mrtrixDir}/bin:${mrtrixDir}/lib:${FSLDIR}/bin:${FIXPATH}:${PATH}"
+  export PATH="${C3DPATH}:${MCRPATH}:${ANACONDA}:${customBin}:${MATLABPATH}:${RPATH}/bin:${AFNIDIR}:${ANTSPATH}:${workbench_path}/bin_linux64:${FREESURFER_HOME}/bin:${mrtrixDir}/bin:${mrtrixDir}/lib:${FSLDIR}/bin:${FIXPATH}:${PATH}"
 
 # Set the libraries paths for mrtrx and fsl (This use of LD_LIBRARY_PATH may be frowned upon :/)
-  export LD_LIBRARY_PATH="${FSLDIR}/lib:${FSLDIR}/bin:${mrtrixDir}/lib:${RPATH}/lib"
+#  export LD_LIBRARY_PATH="${FSLDIR}/lib:${FSLDIR}/bin:${mrtrixDir}/lib:${RPATH}/lib"
+  export LD_LIBRARY_PATH="${ICU60_DIR}/lib:${FSLDIR}/lib:${FSLDIR}/bin:${mrtrixDir}/lib:${RPATH}/lib:${workbench_path}/bin_linux64:${workbench_path}/libs_linux64_software_opengl"
 
 # Append my R library  			*** (NOT TESTED) ***
   myRLibs=${softwareDir}/Rlibs
