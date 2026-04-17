@@ -119,18 +119,29 @@ export idBIDS="${subject}${ses}"
   bids_flair=$(ls "$subject_bids"/anat/*FLAIR*.nii* 2>/dev/null)
 }
 
-# *TL* variable overrides
 set_surface_directory() {
   local recon=${1}
-  export dir_surf=${bids_derivs}/freesurfer                 	# Freesurfer dir
-  export dir_subjsurf=${dir_surf}/${idBIDS}  			# Subject surface dir
+  export dir_surf=${out/\/micapipe_v0.2.0/}/${recon}    # surf
+  export dir_subjsurf=${dir_surf}/${idBIDS}  # Subject surface dir
   export T1surf=${dir_subjsurf}/mri/orig.mgz
-#  export T1surf=${dir_subjsurf}/mri/brain.mgz           	# T1w in freesurfer
 
   # Native midsurface in gifti format
-  export lh_midsurf=${dir_subjsurf}/surf/lh.midthickness.surf.gii
-  export rh_midsurf=${dir_subjsurf}/surf/rh.midthickness.surf.gii
+  export lh_midsurf="${dir_conte69}/${idBIDS}_hemi-L_surf-fsnative_label-midthickness.surf.gii"
+  export rh_midsurf="${dir_conte69}/${idBIDS}_hemi-R_surf-fsnative_label-midthickness.surf.gii"
 }
+
+# *TL* variable overrides
+#set_surface_directory() {
+#  local recon=${1}
+#  export dir_surf=${bids_derivs}/freesurfer                 	# Freesurfer dir
+#  export dir_subjsurf=${dir_surf}/${idBIDS}  			# Subject surface dir
+#  export T1surf=${dir_subjsurf}/mri/orig.mgz
+##  export T1surf=${dir_subjsurf}/mri/brain.mgz           	# T1w in freesurfer
+#
+#  # Native midsurface in gifti format
+#  export lh_midsurf=${dir_subjsurf}/surf/lh.midthickness.surf.gii
+#  export rh_midsurf=${dir_subjsurf}/surf/rh.midthickness.surf.gii
+#}
 
 
 bids_print.variables() {
