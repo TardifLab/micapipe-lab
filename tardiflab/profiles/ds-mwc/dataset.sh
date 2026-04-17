@@ -16,11 +16,19 @@ export LOG_DIR="/data_/tardiflab/mwc/bids/derivatives/micapipe-lab/logs"
 # Root containing externally generated FreeSurfer subject folders
 export EXTERNAL_SURF_ROOT="${BIDS_DIR}/derivatives/freesurfer"
 
-# Optional naming mode for subject folders inside EXTERNAL_SURF_ROOT
-# Expected values could be:
-#   bids        -> sub-01_ses-1
-#   bare        -> 01_ses-1
-export EXTERNAL_SURF_NAMING="bids"
+# How subject/session folders are named inside EXTERNAL_SURF_ROOT
+# Allowed values in the runner below:
+#   sub_ses   -> sub-01_ses-1
+#   bare_ses  -> 01_ses-1
+#   sub_only  -> sub-01
+#   bare_only -> 01
+export EXTERNAL_SURF_NAMING="sub_ses"
+
+
+# Point to the optional module override file for this profile
+PROFILE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export MICAPIPE_PROFILE_MODULE_ARGS="${PROFILE_DIR}/module_args.sh"
+
 
 # Default subjects/sessions for launcher scripts
 DEFAULT_SUBJECTS=(01 02 03)
