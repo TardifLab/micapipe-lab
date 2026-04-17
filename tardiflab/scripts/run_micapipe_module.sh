@@ -116,24 +116,23 @@ source "${MICAPIPE_PROFILE_DATASET}"
 : "${LOG_DIR:?ERROR: LOG_DIR must be defined in ${MICAPIPE_PROFILE_DATASET}}"
 
 
-# Subject specific external freesurfer derivatives
-SUBJECT_SURF_DIR=""
-if [[ -n "${EXTERNAL_SURF_ROOT:-}" ]]; then
-  SUBJECT_SURF_DIR="$(resolve_subject_surf_dir)"
-fi
-
-
-# Helper to compute subject Freesurfer path
+# Helper to allow for external surface files
 resolve_subject_surf_dir() {
   local sub_label="sub-${SUB}"
   local ses_label="${SES}"
 
-  case "${EXTERNAL_SURF_NAMING:-bids}" in
-    bids)
+  case "${EXTERNAL_SURF_NAMING:-sub_ses}" in
+    sub_ses)
       printf '%s\n' "${EXTERNAL_SURF_ROOT}/${sub_label}_${ses_label}"
       ;;
-    bare)
+    bare_ses)
       printf '%s\n' "${EXTERNAL_SURF_ROOT}/${SUB}_${ses_label}"
+      ;;
+    sub_only)
+      printf '%s\n' "${EXTERNAL_SURF_ROOT}/${sub_label}"
+      ;;
+    bare_only)
+      printf '%s\n' "${EXTERNAL_SURF_ROOT}/${SUB}"
       ;;
     *)
       echo "ERROR: unknown EXTERNAL_SURF_NAMING='${EXTERNAL_SURF_NAMING:-}'" >&2
@@ -142,33 +141,59 @@ resolve_subject_surf_dir() {
   esac
 }
 
+SUBJECT_SURF_DIR=""
+if [[ -n "${EXTERNAL_SURF_ROOT:-}" ]]; then
+  SUBJECT_SURF_DIR="$(resolve_subject_surf_dir)"
+fi
+export SUBJECT_SURF_DIR
 
-build_micapipe_args() {
+
+# Helper to set default flags for micapipe modules
+build_default_micapipe_args() {
   local module="$1"
   case "${module}" in
     volumetric)
       printf '%s\n' "-proc_structural"
       ;;
     proc_surf)
-      printf '%s\n' "-proc_surf" "-surf_dir" "${SUBJECT_SURF_DIR}"
+      printf '%s\n' "-proc_surf"
       ;;
     post_structural)
       printf '%s\n' "-post_structural"
       ;;
     dwi)
-      printf '%s\n' "-dwi_upscale" "-proc_dwi"
+      printf '%s\n' "-proc_dwi"
       ;;
     SC)
-      printf '%s\n' "-tracts" "3M" "-filter" "COMMIT" "-reg_lambda" "15e-1" "-SC"
+      printf '%s\n' "-SC"
       ;;
     FC)
-      printf '%s\n' "-nocleanup" "-NSR" "-dropTR" "-manual_ICRemoval" "-noFIX" "-proc_func"
+      printf '%s\n' "-proc_func"
       ;;
     *)
       return 127
       ;;
   esac
 }
+
+
+# Allow profile to set flags for each module
+maybe_build_profile_module_args() {
+  local module="$1"
+
+  if [[ -n "${MICAPIPE_PROFILE_MODULE_ARGS:-}" && -f "${MICAPIPE_PROFILE_MODULE_ARGS}" ]]; then
+    # shellcheck disable=SC1090
+    source "${MICAPIPE_PROFILE_MODULE_ARGS}"
+
+    if declare -f micapipe_profile_build_module_args >/dev/null 2>&1; then
+      micapipe_profile_build_module_args "${module}"
+      return $?
+    fi
+  fi
+
+  return 127
+}
+
 
 maybe_run_custom_module() {
   if [[ -n "${MICAPIPE_CUSTOM_MODULE_DISPATCH:-}" && -f "${MICAPIPE_CUSTOM_MODULE_DISPATCH}" ]]; then
@@ -182,13 +207,21 @@ maybe_run_custom_module() {
   return 127
 }
 
+
+# Resolve module args
 MODULE_ARGS=()
-if mapfile -t MODULE_ARGS < <(build_micapipe_args "${MODULE}"); then
-  :
+MODULE_ARGS_TEXT=""
+
+if MODULE_ARGS_TEXT="$(maybe_build_profile_module_args "${MODULE}")"; then
+  mapfile -t MODULE_ARGS <<< "${MODULE_ARGS_TEXT}"
+elif MODULE_ARGS_TEXT="$(build_default_micapipe_args "${MODULE}")"; then
+  mapfile -t MODULE_ARGS <<< "${MODULE_ARGS_TEXT}"
 else
   MODULE_ARGS=()
 fi
 
+
+# Handle unrecognized modules
 if [[ ${#MODULE_ARGS[@]} -eq 0 ]]; then
   if maybe_run_custom_module; then
     exit 0
@@ -197,6 +230,7 @@ if [[ ${#MODULE_ARGS[@]} -eq 0 ]]; then
     exit 1
   fi
 fi
+
 
 CMD=(
   "${MICAPIPE_BIN}"
