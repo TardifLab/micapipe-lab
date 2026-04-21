@@ -294,7 +294,7 @@ N=0
 # Create script specific temp directory
 # *TL* mods to tmp dir
 if [[ "${MICAPIPE_FUNC_STABLE_TMP:-0}" -eq 1 ]]; then
-    tmp="${tmpDir}/micapipe_proc-func_${idBIDS}"          				# option for stable tmp dir to support multiple processing runs
+    tmp="${tmpDir}/micapipe_proc-func/${idBIDS}"          				# option for stable tmp dir to support multiple processing runs
     Info "Using stable temp directory for proc_func: ${tmp}"
     if [[ "${MICAPIPE_FUNC_RESET_TMP:-0}" -eq 1 ]] && [[ -d "${tmp}" ]]; then
     	Info "Resetting existing stable temp directory: ${tmp}"
@@ -628,8 +628,7 @@ proc_func_transformations "${dir_warp}/${idBIDS}_transformations-proc_func-${tag
 fix_output="${func_ICA}/filtered_func_data_clean.nii.gz"
 func_processed="${func_volum}/${idBIDS}${func_lab}_preproc.nii.gz"
 
-
-# Allow profile to control FIX behavior *TL*
+# --- *TL* Profile-override of FIX
 profile_fix_hook_rc=0
 
 if declare -f micapipe_profile_func_fix_hook >/dev/null 2>&1; then
@@ -654,9 +653,10 @@ case "${profile_fix_hook_rc}" in
     ;;
 esac
 
+# embed original FIX code in conditional
 if [[ "${profile_fix_hook_rc}" -ne 11 ]]; then
   # run  built-in FIX / noFIX logic
-
+# ---------- Original FIX code
 # Run if fmri_clean does not exist
 if [[ "$noFIX" -eq 0 ]]; then
     if [[ ! -f "${func_processed}" ]] ; then
@@ -725,7 +725,7 @@ else
     if [[ "$noFIX" -eq 1 ]]; then export statusFIX="NO"; fi
     json_func "${func_volum}/${idBIDS}${func_lab}_preproc.json"
 fi
-
+# ---------- Original FIX code
 fi
 
 #------------------------------------------------------------------------------#
