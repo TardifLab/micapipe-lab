@@ -102,6 +102,12 @@ Note "Longitudinal ses :" "$sesAnat"
 Note "Drop TR          :" "${dropTR}"
 Note "Surface          :" "${recon}"
 
+# Optional profile-specific hooks for proc_func *TL*
+if [[ -n "${MICAPIPE_PROFILE_FUNC_HOOKS:-}" && -f "${MICAPIPE_PROFILE_FUNC_HOOKS}" ]]; then
+  # shellcheck disable=SC1090
+  source "${MICAPIPE_PROFILE_FUNC_HOOKS}"
+fi
+
 #------------------------------------------------------------------------------#
 if [[ "$mainScanStr" == DEFAULT ]]; then
     # Main scan
@@ -611,6 +617,35 @@ proc_func_transformations "${dir_warp}/${idBIDS}_transformations-proc_func-${tag
 fix_output="${func_ICA}/filtered_func_data_clean.nii.gz"
 func_processed="${func_volum}/${idBIDS}${func_lab}_preproc.nii.gz"
 
+
+# Allow profile to control FIX behavior *TL*
+profile_fix_hook_rc=0
+
+if declare -f micapipe_profile_func_fix_hook >/dev/null 2>&1; then
+  micapipe_profile_func_fix_hook
+  profile_fix_hook_rc=$?
+fi
+
+case "${profile_fix_hook_rc}" in
+  0)
+    # continue with built-in FIX / noFIX logic
+    ;;
+  10)
+    Info "Profile requested halt before ICA-FIX"
+    exit 0
+    ;;
+  11)
+    Info "Profile handled denoising in place of built-in ICA-FIX"
+    ;;
+  *)
+    Error "Profile FIX hook failed with code ${profile_fix_hook_rc}"
+    exit 1
+    ;;
+esac
+
+if [[ "${profile_fix_hook_rc}" -ne 11 ]]; then
+  # run  built-in FIX / noFIX logic
+
 # Run if fmri_clean does not exist
 if [[ "$noFIX" -eq 0 ]]; then
     if [[ ! -f "${func_processed}" ]] ; then
@@ -678,6 +713,8 @@ else
     cp -rf "${fmri_HP}" "$func_processed"
     if [[ "$noFIX" -eq 1 ]]; then export statusFIX="NO"; fi
     json_func "${func_volum}/${idBIDS}${func_lab}_preproc.json"
+fi
+
 fi
 
 #------------------------------------------------------------------------------#
