@@ -3,6 +3,17 @@
 #
 # Allows profile to control ICA-FIX behavior in built-in func proc module
 #
+# The user should set the value of MICAPIPE_FUNC_FIX_MODE prior to calling run_micapipe_module.sh
+#
+# Examples:
+# - To stop at fix and perform IC labeling / classifier training:
+# MICAPIPE_FUNC_FIX_MODE=stop_at_fix run_micapipe_module.sh ... --module FC
+#
+# - To perform manual denoising using labeled components:
+# MICAPIPE_FUNC_FIX_MODE=manual_ic_remove \
+# MICAPIPE_FUNC_IC_LABEL_FILE=/path/to/ic_lblFinalOutput.txt \
+# run_micapipe_module.sh ... --module FC
+#
 # 2026 Mark C Nelson MNI
 #------------------------------------------------------------------------------------------------------------------------------------
 
