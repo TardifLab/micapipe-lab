@@ -13,6 +13,9 @@ export BIDS_DIR="/data_/tardiflab/mwc/bids"
 export OUT_DIR="/data_/tardiflab/mwc/bids/derivatives/micapipe-lab"
 export LOG_DIR="/data_/tardiflab/mwc/bids/derivatives/micapipe-lab/logs"
 
+export MICAPIPE_TMP_ROOT="${OUT_DIR}/tmp"
+mkdir -p "${MICAPIPE_TMP_ROOT}"
+
 # Root containing externally generated FreeSurfer subject folders
 export EXTERNAL_SURF_ROOT="${BIDS_DIR}/derivatives/freesurfer"
 
