@@ -292,9 +292,14 @@ aloita=$(date +%s)
 Nsteps=0
 N=0
 # Create script specific temp directory
+# *TL* mods to tmp dir
 if [[ "${MICAPIPE_FUNC_STABLE_TMP:-0}" -eq 1 ]]; then
-    tmp="${tmpDir}/micapipe_proc-func_${idBIDS}"          		# *TL* option for stable tmp dir to support multiple processing runs
+    tmp="${tmpDir}/micapipe_proc-func_${idBIDS}"          				# option for stable tmp dir to support multiple processing runs
     Info "Using stable temp directory for proc_func: ${tmp}"
+    if [[ "${MICAPIPE_FUNC_RESET_TMP:-0}" -eq 1 ]] && [[ -d "${tmp}" ]]; then
+    	Info "Resetting existing stable temp directory: ${tmp}"
+    	rm -rf "${tmp}"									# Optionally reset stable tmp dir
+    fi
 else
     tmp="${tmpDir}/${RANDOM}_micapipe_proc-func_${idBIDS}"
     Info "Using randomized temp directory for proc_func: ${tmp}"
