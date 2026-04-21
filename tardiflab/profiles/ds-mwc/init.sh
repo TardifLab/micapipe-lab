@@ -86,12 +86,18 @@ source "${FSLDIR}/etc/fslconf/fsl.sh"
   export LD_LIBRARY_PATH="${ICU60_DIR}/lib:${FSLDIR}/lib:${FSLDIR}/bin:${mrtrixDir}/lib:${RPATH}/lib:${workbench_path}/bin_linux64:${workbench_path}/libs_linux64_software_opengl"
 
 #------------------------------------------------------------------------------#
-# Environment variables to allow profile to control FIX
+# --- ENVIRONMENT VARIABLES ALLOWING PROFILE-OVERRIDE OF MICAPIPE BEHAVIOR ---#
+
+# Profile control of ICA-FIX
 PROFILE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export MICAPIPE_PROFILE_FUNC_HOOKS="${PROFILE_DIR}/func_hooks.sh"
 export MICAPIPE_FUNC_FIX_MODE="${MICAPIPE_FUNC_FIX_MODE:-default}"
-export MICAPIPE_FUNC_FIX_WORKDIR="${OUT_DIR}/tmp_micapipe/02_proc-func"
+export MICAPIPE_FUNC_FIX_WORKDIR="${MICAPIPE_TMP_ROOT}/micapipe_proc-func"
 export MICAPIPE_FUNC_IC_LABEL_FILE="${MICAPIPE_FUNC_IC_LABEL_FILE:-${MICAPIPE_FUNC_FIX_WORKDIR}/ic_lblFinalOutput.txt}"
+
+# Profile control of func tmp dir
+export MICAPIPE_FUNC_STABLE_TMP="${MICAPIPE_FUNC_STABLE_TMP:-1}" 			# switches to stable tmp directory
+export MICAPIPE_FUNC_RESET_TMP="${MICAPIPE_FUNC_RESET_TMP:-0}"				# preserves existing stable dir
 #------------------------------------------------------------------------------#
 
 # Append my R library  			*** (NOT TESTED) ***
