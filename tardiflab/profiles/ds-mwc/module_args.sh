@@ -8,6 +8,9 @@ micapipe_profile_build_module_args() {
       : "${SUBJECT_SURF_DIR:?ERROR: SUBJECT_SURF_DIR is not set}"
       printf '%s\n' "-proc_surf" "-freesurfer" "-surf_dir" "${SUBJECT_SURF_DIR}"
       ;;
+   FC)
+      printf '%s\n' "-proc_func" "-nocleanup" "-NSR" "-dropTR" "-tmpDir" "${MICAPIPE_TMP_ROOT}"
+      ;;
     *)
       return 127
       ;;
