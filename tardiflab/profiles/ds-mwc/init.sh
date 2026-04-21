@@ -98,10 +98,17 @@ source "${FSLDIR}/etc/fslconf/fsl.sh"
   export LC_ALL=en_US.UTF-8
   export LANG=en_US.UTF-8
 
+# Use micapipe Python venv
+MICAPIPE_PYENV="${softwareDir}/venvs/micapipe_py"
+
+if [[ -d "${MICAPIPE_PYENV}" ]]; then
+  export PATH="${MICAPIPE_PYENV}/bin:${PATH}"
+fi
+
 # Additional Paths
 # Virtual environments
-  export pyvenv_commit=${softwareDir}/COMMIT_MTR_env 					# Location of virtual environment with dependencies for COMMIT & AMICO
-  export pyvenv_micapipe=micapipe_mwc_env                                		# micapipe python venv (conda activate $pyvenv_micapipe)
+#  export pyvenv_commit=${softwareDir}/COMMIT_MTR_env 					# Location of virtual environment with dependencies for COMMIT & AMICO
+#  export pyvenv_micapipe=micapipe_mwc_env                                		# micapipe python venv (conda activate $pyvenv_micapipe)
 
 # To run on cluster
   export SGE_ROOT=/opt/sge
