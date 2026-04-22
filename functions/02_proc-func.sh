@@ -649,7 +649,10 @@ func_processed="${func_volum}/${idBIDS}${func_lab}_preproc.nii.gz"
 # --- *TL* Profile-override of FIX
 profile_fix_hook_rc=0
 
-if declare -f micapipe_profile_func_fix_hook >/dev/null 2>&1; then
+if [[ "${MICAPIPE_FUNC_DENOISE_ALREADY_DONE:-0}" -eq 1 ]]; then
+  Info "Manual denoising was already completed earlier; skipping FIX-stage profile hook"
+  profile_fix_hook_rc=11
+elif declare -f micapipe_profile_func_fix_hook >/dev/null 2>&1; then
   micapipe_profile_func_fix_hook
   profile_fix_hook_rc=$?
 fi

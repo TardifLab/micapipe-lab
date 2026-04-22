@@ -132,6 +132,7 @@ micapipe_try_manual_ic_resume() {
                 Info "Manual IC removal completed from existing ICA workspace"
                 export statusMel="YES"
                 export statusFIX="MANUAL"
+		export MICAPIPE_FUNC_DENOISE_ALREADY_DONE=1
                 return 11
                 ;;
             0)
