@@ -102,7 +102,7 @@ Note "Longitudinal ses :" "$sesAnat"
 Note "Drop TR          :" "${dropTR}"
 Note "Surface          :" "${recon}"
 
-# Optional profile-specific hooks for proc_func *TL*
+# Source profile-specific hooks for proc_func *TL*
 if [[ -n "${MICAPIPE_PROFILE_FUNC_HOOKS:-}" && -f "${MICAPIPE_PROFILE_FUNC_HOOKS}" ]]; then
   # shellcheck disable=SC1090
   source "${MICAPIPE_PROFILE_FUNC_HOOKS}"
@@ -436,6 +436,24 @@ function func_topup() {
 # Begining of the REAL processing
 status="INCOMPLETE"
 GSR=0
+# --- *TL* early fast-path for manual IC removal from existing ICA workspace
+manual_resume_rc=0
+micapipe_try_manual_ic_resume
+manual_resume_rc=$?
+
+case "${manual_resume_rc}" in
+    11)
+        Info "Skipping pre-FIX processing because manual denoising already produced the final preprocessed output"
+        ;;
+    0)
+        :
+        ;;
+    *)
+        Error "Unexpected return code from micapipe_try_manual_ic_resume: ${manual_resume_rc}"
+        exit 1
+        ;;
+esac
+
 # Processing fMRI acquisitions.
 if [[ ! -f "${func_volum}/${idBIDS}${func_lab}_preproc".nii.gz ]]; then
     # Reorient and motion correct main(s) fMRI
