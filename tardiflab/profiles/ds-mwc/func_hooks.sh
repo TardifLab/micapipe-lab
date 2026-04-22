@@ -86,10 +86,8 @@ micapipe_profile_func_fix_hook() {
   esac
 }
 
-# -------------------------------------------------------------------------
-# --- Profile control of manual IC removal runs
-# -------------------------------------------------------------------------
-# Try manual resume from existing ICA workspace
+
+# --- Try manual resume from existing ICA workspace
 # (ensure pre-fix processing is not rerun)
 micapipe_try_manual_ic_resume() {
     # Only applies to manual-IC-removal mode
@@ -151,3 +149,39 @@ micapipe_try_manual_ic_resume() {
 
     return 0
 }
+
+# --- Extract integer IC indices for a given sub-ses ID
+# Finds a target sub-##_ses-# ID in an input plain text file and prints the comma-separated list of integer
+# values for that dataset.
+#
+# INPUTS:
+#       $1 : full path to text file with ICs marked for removal
+#       $2 : search ID (e.g., sub-02_ses-1)
+
+getICs_by_id() {
+    local file_path="$1"
+    local search_id="$2"
+
+    [[ -f "$file_path" ]] || return 1
+    [[ -n "$search_id" ]] || return 1
+
+# --> Loses commas between values in some cases
+#   # unleash the power of awk!
+#   awk -F, -v id="$search_id" '$1 == id { $1=""; print substr($0,2) }' "$file_path"
+
+
+# --> Commas are always included, but doesn't strip trailing commas if rows have varying numbers of values!
+     # Try again awk!
+#    awk -F, -v id="$search_id" '$1 == id {$1=""; for (i=2; i<=NF; i++) {if (i > 2) { printf "," } printf "%s", $i} print ""}' "$file_path"
+#    awk -F, -v id="$search_id" '$1 == id { $1=""; for (i=2; i<=NF; i++) { if (i > 2) { printf "," } printf "%s", $i } print "" }' "$file_path"
+
+  # sed to the rescue!
+  sed 's/,*$//' "$file_path" | \
+  awk -F, -v id="$search_id" '$1 == id { $1=""; fields = ""; for (i=2; i<=NF; i++) {fields = fields (fields == "" ? "" : ",") $i} print fields}'
+}
+
+
+# -------------------------------------------------------------------------
+# --- Profile control of
+# -------------------------------------------------------------------------
+
