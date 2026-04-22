@@ -37,6 +37,30 @@ export MICAPIPE_PROFILE_MODULE_ARGS="${PROFILE_DIR}/module_args.sh"
 DEFAULT_SUBJECTS=(01 02 03)
 DEFAULT_SESSIONS=(1)
 
+# Helper assigning default vmem values for each module
+default_vmem_for_module() {
+  if declare -f profile_default_vmem_for_module >/dev/null 2>&1; then
+    profile_default_vmem_for_module "$1"
+    return
+  fi
+
+  case "$1" in
+    volumetric)       echo 6 ;;
+    post_structural)  echo 3 ;;
+    dwi)              echo 25 ;;
+    noddi)            echo 10 ;;
+    SC)               echo 50 ;;
+    commit_prep)      echo 5 ;;
+    commit)           echo 50 ;;
+    connectomes)      echo 10 ;;
+    FC)               echo 20 ;;
+    pre_COMMIT)       echo 10 ;;
+    proc_COMMIT)      echo 40 ;;
+    conn_slice)       echo 5 ;;
+    *)                echo 8 ;;
+  esac
+}
+
 # Optional dataset-specific cluster defaults
 # export PROFILE_DEFAULT_QUEUE="all.q"
 
