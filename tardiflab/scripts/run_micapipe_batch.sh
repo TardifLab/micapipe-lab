@@ -46,6 +46,7 @@ VMEM_OVERRIDE=""
 RUNNER=""
 DRY_RUN=0
 PASSTHROUGH=()
+ENV_VARS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -67,6 +68,8 @@ while [[ $# -gt 0 ]]; do
       VMEM_OVERRIDE="$2"; shift 2 ;;
     --runner)
       RUNNER="$2"; shift 2 ;;
+    --env)
+      ENV_VARS+=("$2"); shift 2 ;;
     --dry-run)
       DRY_RUN=1; shift ;;
     --help|-h)
@@ -142,28 +145,6 @@ if [[ ! -x "${RUNNER}" ]]; then
   exit 1
 fi
 
-default_vmem_for_module() {
-  if declare -f profile_default_vmem_for_module >/dev/null 2>&1; then
-    profile_default_vmem_for_module "$1"
-    return
-  fi
-
-  case "$1" in
-    volumetric)       echo 6 ;;
-    post_structural)  echo 3 ;;
-    dwi)              echo 25 ;;
-    noddi)            echo 10 ;;
-    SC)               echo 50 ;;
-    commit_prep)      echo 5 ;;
-    commit)           echo 50 ;;
-    connectomes)      echo 10 ;;
-    FC)               echo 20 ;;
-    pre_COMMIT)       echo 10 ;;
-    proc_COMMIT)      echo 40 ;;
-    conn_slice)       echo 5 ;;
-    *)                echo 8 ;;
-  esac
-}
 
 parse_csv_or_default() {
   local raw="$1"
@@ -175,6 +156,14 @@ parse_csv_or_default() {
   else
     printf '%s\n' "${defaults[@]}"
   fi
+}
+
+validate_env_assignment() {
+  local assignment="$1"
+  [[ "$assignment" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || {
+    echo "ERROR: invalid --env assignment: $assignment" >&2
+    return 1
+  }
 }
 
 SUBJECTS=()
@@ -191,7 +180,13 @@ if [[ ${#SESSIONS[@]} -eq 0 || -z "${SESSIONS[0]}" ]]; then
   exit 1
 fi
 
+# get vmem
 VMEM="${VMEM_OVERRIDE:-$(default_vmem_for_module "${MODULE}")}"
+
+# Call env var validator
+for env_kv in "${ENV_VARS[@]}"; do
+  validate_env_assignment "$env_kv"
+done
 
 mkdir -p "${LOG_DIR}"
 LOG_FUNC_DIR="${LOG_DIR}/${MODULE}"
@@ -201,7 +196,11 @@ submit_local() {
   local sub="$1"
   local ses="$2"
 
-  local cmd=(
+  local cmd=()
+  if [[ ${#ENV_VARS[@]} -gt 0 ]]; then
+    cmd+=(env "${ENV_VARS[@]}")
+  fi
+  cmd+=(
     "${RUNNER}"
     --config "${CONFIG_FILE}"
     --profile "${PROFILE}"
@@ -236,6 +235,13 @@ submit_cluster() {
     -l "h_vmem=${VMEM}G"
     -N "${job_name}"
     /usr/bin/time --verbose
+  )
+
+  if [[ ${#ENV_VARS[@]} -gt 0 ]]; then
+    cmd+=(env "${ENV_VARS[@]}")
+  fi
+
+  cmd+=(
     "${RUNNER}"
     --config "${CONFIG_FILE}"
     --profile "${PROFILE}"
