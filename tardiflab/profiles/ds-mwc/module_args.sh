@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
+#
+# Profile-specific flags for modules
 
+# Helper that will override the default flags for built-in micapipe modules
 micapipe_profile_build_module_args() {
   local module="$1"
 
@@ -16,3 +19,6 @@ micapipe_profile_build_module_args() {
       ;;
   esac
 }
+
+
+# Helper to override default flags for custom lab modules

@@ -20,6 +20,7 @@ Optional:
   --queue NAME           Cluster queue (default: config DEFAULT_QUEUE)
   --vmem GB              Override per-job requested memory in GB
   --runner FILE          Override single-subject runner script
+  --env 		 Pass environment variables through qbatch
   --dry-run              Print commands and do not execute
   --help                 Show this message
   --                     Pass remaining arguments through to the module runner

@@ -45,15 +45,16 @@ default_vmem_for_module() {
   fi
 
   case "$1" in
-    volumetric)       echo 6 ;;
-    post_structural)  echo 3 ;;
+    volumetric)       echo 12 ;;
+    proc_surf)        echo 3 ;;
+    post_structural)  echo 4 ;;
     dwi)              echo 25 ;;
     noddi)            echo 10 ;;
     SC)               echo 50 ;;
     commit_prep)      echo 5 ;;
     commit)           echo 50 ;;
     connectomes)      echo 10 ;;
-    FC)               echo 20 ;;
+    FC)               echo 40 ;;
     pre_COMMIT)       echo 10 ;;
     proc_COMMIT)      echo 40 ;;
     conn_slice)       echo 5 ;;
