@@ -86,18 +86,33 @@ source "${FSLDIR}/etc/fslconf/fsl.sh"
   export LD_LIBRARY_PATH="${ICU60_DIR}/lib:${FSLDIR}/lib:${FSLDIR}/bin:${mrtrixDir}/lib:${RPATH}/lib:${workbench_path}/bin_linux64:${workbench_path}/libs_linux64_software_opengl"
 
 #------------------------------------------------------------------------------#
-# --- ENVIRONMENT VARIABLES ALLOWING PROFILE-OVERRIDE OF MICAPIPE BEHAVIOR ---#
+# --- ENVIRONMENT VARIABLES ALLOWING PROFILE-OVERRIDE OF MICAPIPE BEHAVIOR  ---#
+# -----------------------------------------------------------------------------#
+  PROFILE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ----- FUNC ----- #
+  export MICAPIPE_PROFILE_FUNC_HOOKS="${PROFILE_DIR}/func_hooks.sh"
 
 # Profile control of ICA-FIX
-PROFILE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export MICAPIPE_PROFILE_FUNC_HOOKS="${PROFILE_DIR}/func_hooks.sh"
-export MICAPIPE_FUNC_FIX_MODE="${MICAPIPE_FUNC_FIX_MODE:-default}"
-export MICAPIPE_FUNC_FIX_WORKDIR="${MICAPIPE_TMP_ROOT}/micapipe_proc-func"
-export MICAPIPE_FUNC_IC_LABEL_FILE="${MICAPIPE_FUNC_IC_LABEL_FILE:-${MICAPIPE_FUNC_FIX_WORKDIR}/ic_lblFinalOutput.txt}"
+  export MICAPIPE_FUNC_FIX_MODE="${MICAPIPE_FUNC_FIX_MODE:-default}"
+  export MICAPIPE_FUNC_FIX_WORKDIR="${MICAPIPE_TMP_ROOT}/micapipe_proc-func"
+  export MICAPIPE_FUNC_IC_LABEL_FILE="${MICAPIPE_FUNC_IC_LABEL_FILE:-${MICAPIPE_FUNC_FIX_WORKDIR}/ic_lblFinalOutput.txt}"
 
 # Profile control of func tmp dir
-export MICAPIPE_FUNC_STABLE_TMP="${MICAPIPE_FUNC_STABLE_TMP:-1}" 			# switches to stable tmp directory
-export MICAPIPE_FUNC_RESET_TMP="${MICAPIPE_FUNC_RESET_TMP:-0}"				# preserves existing stable dir
+  export MICAPIPE_FUNC_STABLE_TMP="${MICAPIPE_FUNC_STABLE_TMP:-1}" 			# switches to stable tmp directory
+  export MICAPIPE_FUNC_RESET_TMP="${MICAPIPE_FUNC_RESET_TMP:-0}"				# preserves existing stable dir
+
+
+# ----- DWI ----- #
+  export MICAPIPE_PROFILE_DWI_HOOKS="${PROFILE_DIR}/dwi_hooks.sh"
+
+# Partial Fourier override
+  export MICAPIPE_DWI_DENOISE_MODE="${MICAPIPE_DWI_DENOISE_MODE:-default}"
+  export MICAPIPE_DWI_HOOK_DRY_RUN="${MICAPIPE_DWI_HOOK_DRY_RUN:-1}" 						# First testing mode: print diagnostics but do not run custom commands
+  export MICAPIPE_DWI_RPG_DEGIBBS_DIR="${MICAPIPE}/tardiflab/scripts/01_processing/rpg_degibbs" 		# Path to custom RPG degibbs code
+  export MICAPIPE_DWI_PARTIAL_FOURIER_FACTOR="${MICAPIPE_DWI_PARTIAL_FOURIER_FACTOR:-6/8}" 			# Partial-Fourier factor used by custom RPG degibbs path
+
+
 #------------------------------------------------------------------------------#
 
 # Append my R library  			*** (NOT TESTED) ***

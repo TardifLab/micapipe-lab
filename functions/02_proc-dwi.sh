@@ -63,6 +63,14 @@ Note "Processing    :" "$PROC"
 Note "Saving temporal dir     :" "$nocleanup"
 Note "ANTs and MRtrix will use: " "$threads threads"
 
+
+# --- *TL* Profile-specific hooks for proc_dwi
+if [[ -n "${MICAPIPE_PROFILE_DWI_HOOKS:-}" && -f "${MICAPIPE_PROFILE_DWI_HOOKS}" ]]; then
+  # shellcheck disable=SC1090
+  source "${MICAPIPE_PROFILE_DWI_HOOKS}"
+fi
+
+
 # mtrix configuration file
 if ! [[ ${b0thr} =~ ^-?[0-9]+$ ]] ; then Error "B0 threshold is not a valid integrer: ${b0thr}" >&2; exit 1; fi
 mrconf="${HOME}/.mrtrix.conf"
@@ -204,12 +212,36 @@ if [[ "$dwi_processed" == "FALSE" ]] && [[ ! -f "$dwi_corr" ]]; then
 
           # Denoise DWI and calculate residuals
           Info "DWI MP-PCA denoising and Gibbs ringing correction"
+
+# *TL* branch point for degibbs behavior START
+	  profile_dwi_hook_rc=0
+
+          if declare -f micapipe_profile_dwi_denoise_hook >/dev/null 2>&1; then
+             micapipe_profile_dwi_denoise_hook
+             profile_dwi_hook_rc=$?
+          fi
+
+          case "${profile_dwi_hook_rc}" in
+	    0)
+              # Continue with built-in micapipe behavior
+# --- Original code
           dwi_dns_tmp="${tmp}/MP-PCA_dwi.mif"
           Do_cmd dwidenoise "$dwi_cat" "$dwi_dns_tmp" -nthreads "$threads"
           mrcalc "$dwi_cat" "$dwi_dns_tmp" -subtract - -nthreads "$threads" | mrmath - mean "$dwi_resPCA" -axis 3
           Do_cmd mrdegibbs "$dwi_dns_tmp" "$dwi_dns" -nthreads "$threads"
           mrcalc "$dwi_dns_tmp" "$dwi_dns" -subtract - -nthreads "$threads" | mrmath - mean "$dwi_resGibss" -axis 3
           ((Nsteps++))
+# --- Original code
+	      ;;
+	    11)
+    	      Info "Profile handled DWI denoise/degibbs block"
+    	      ;;
+  	    *)
+    	      Error "Profile DWI denoise hook failed with code ${profile_dwi_hook_rc}"
+    	      exit 1
+    	      ;;
+	    esac
+# *TL* branch point for degibbs behavior END
     else
           Info "Subject ${id} has DWI in mif, denoised and concatenaded"; ((Nsteps++)); ((N++))
     fi
