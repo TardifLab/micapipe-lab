@@ -1,0 +1,77 @@
+# Just a bunch of example function calls to help. I typically call these inline, but they are prettied up a little here.
+
+## --- Local calls to the module runner 
+# Volumetric structural module (with optional dry-run flag for debugging)
+/data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/run_micapipe_module.sh \
+  --config /data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --sub 01 \
+  --ses 1 \
+  --dry-run \
+  --module volumetric
+
+
+# Func module with default FIX behavior
+MICAPIPE_FUNC_FIX_MODE=default \
+/data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/run_micapipe_module.sh \
+  --config /data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --sub 01 \
+  --ses 1 \
+  --module FC
+
+# Func module with stop_at_fix custom behavior (the first pass to support e.g., to support manual labeling or custom classifier training) (note example export syntax)
+export MICAPIPE_FUNC_FIX_MODE=stop_at_fix 
+/data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/run_micapipe_module.sh \
+  --config /data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --sub 01 \
+  --ses 1 \
+  --module FC  
+
+# Func module with manual IC removal custom behavior (the 2nd pass after manual IC labeling)
+MICAPIPE_FUNC_FIX_MODE=manual_ic_remove \
+/data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/run_micapipe_module.sh \
+  --config /data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --sub 01 \
+  --ses 1 \
+  --module FC
+
+
+# -- DWI --
+
+# DWI module with default degibbs
+MICAPIPE_DWI_DENOISE_MODE=default \
+/data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/run_micapipe_module.sh \
+  --config /data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --sub 01 \
+  --ses 1 \
+  --module dwi
+
+# DWI module with custom degibbs (set dry run to 1 for debugging printout)
+MICAPIPE_DWI_DENOISE_MODE=lab_degibbs \
+MICAPIPE_DWI_HOOK_DRY_RUN=0 \ 
+/data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/run_micapipe_module.sh \
+  --config /data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --sub 01 \
+  --ses 1 \
+  --module dwi
+
+
+
+# ------------------------------------------------------------------------------------------------------
+
+## --- Cluster calls to batch runner
+# Func module with stop_at_fix behavior (including custom environment variables & vmem overrides)
+/data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/run_micapipe_batch.sh \
+  --config /data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --subjects 02 \
+  --sessions 1 \
+  --module FC \
+  --mode cluster \
+  --vmem 30 \
+  --env MICAPIPE_FUNC_FIX_MODE=stop_at_fix
