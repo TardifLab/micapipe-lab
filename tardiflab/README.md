@@ -1,91 +1,596 @@
 # micapipe-lab
 
-This repository is the **central micapipe codebase for the Tardiflab**. It is intended to support multiple datasets through a shared core pipeline and dataset-specific profiles.
+`micapipe-lab` is a lab-maintained version of `micapipe` intended to support multiple Tardiflab datasets through one shared codebase and dataset-specific profiles.
 
-Long-term goals:
+The broad aims are to:
 
-- maintain a single shared codebase for lab development
 - reduce duplication across project-specific pipeline copies
-- support dataset-specific processing needs through profiles
-- stay as aligned as practical with the upstream `micapipe` repository
-- facilitate eventual integration of lab-developed functionality into the public pipeline where appropriate
+- keep lab development in one maintainable place
+- support dataset-specific processing choices through profiles
+- stay reasonably aligned with the upstream `MICA-MNI/micapipe` repository
+- make it easier to identify lab-developed functionality that could eventually be generalized or contributed upstream
+
+This README is intended as a practical guide for people who maintain, extend, or run this lab implementation.
 
 ---
 
-## Repository Core Method 
+## Guiding idea
 
-To acheive these goals:
+The main design idea is:
 
-- all core modifications should be **minimal and generic**,
-- and most dataset-specific behavior should be **isolated outside the core**
+> Keep the shared pipeline as generic as possible, and place dataset-specific behavior in profiles.
 
-In this model:
+In practice, this means:
 
-- the **core pipeline** contains shared logic and generic extension points
-- each **profile** defines dataset-specific paths, utilities, parameters, and processing choices
-- new methods that are generally useful should be added in a reusable way
-- one-off dataset-specific logic should live in the relevant profile rather than in the shared core
+- the shared pipeline should contain common logic and small, reusable extension points
+- each dataset profile should define paths, environment setup, module defaults, and dataset-specific choices
+- experimental or dataset-specific methods can be developed in profile hook files first
+- code can move into the shared core later if it proves broadly useful
+
+The goal is to make future development easier to understand, test, and merge.
 
 ---
 
-## Development vs. Execution
+## Repository layout
 
-This seection clarifies the distinction between **development and pipeline execution**.
+A typical layout is:
+
+```text
+micapipe-lab/
+├── micapipe
+├── functions/
+├── MNI152Volumes/
+├── parcellations/
+├── surfaces/
+├── tardiflab/
+│   ├── core/
+│   │   └── profile_loader.sh
+│   ├── docs/
+│   ├── lab_ext/
+│   ├── profiles/
+│   │   ├── ds-mwc/
+│   │   │   ├── dataset.sh
+│   │   │   ├── init.sh
+│   │   │   ├── utilities.sh
+│   │   │   ├── params.sh
+│   │   │   ├── module_args.sh
+│   │   │   ├── func_hooks.sh
+│   │   │   └── dwi_hooks.sh
+│   │   └── ds-other/
+│   ├── scripts/
+│   │   ├── run_micapipe_module.sh
+│   │   └── run_micapipe_batch.sh
+│   └── templates/
+```
+
+### Main areas
+
+- `functions/`, `micapipe`, and related top-level files  
+  Shared micapipe pipeline code, including small lab extension points where needed.
+
+- `tardiflab/core/`  
+  Shared lab infrastructure, such as the profile loader.
+
+- `tardiflab/profiles/`  
+  Dataset profiles. These are the preferred place for dataset-specific paths, environment setup, module defaults, and profile hooks.
+
+- `tardiflab/scripts/`  
+  Convenience launchers for running one module or submitting a module across many subjects/sessions.
+
+- `tardiflab/lab_ext/`  
+  Optional location for shared lab methods that are not part of upstream micapipe but may be useful across more than one dataset.
+
+- `tardiflab/docs/`  
+  Internal notes, migration records, examples, and troubleshooting documentation.
+
+---
+
+## Profiles
+
+A profile is a dataset-specific configuration layer. It lets the same shared pipeline behave differently for different datasets without maintaining separate copies of micapipe.
+
+Profiles usually live in:
+
+```text
+tardiflab/profiles/<profile-name>/
+```
+
+For example:
+
+```text
+tardiflab/profiles/ds-mwc/
+```
+
+### Common profile files
+
+A profile may contain some or all of the following:
+
+| File | Typical role |
+|---|---|
+| `dataset.sh` | Dataset paths, default subject/session lists, log paths, queue defaults, resource defaults |
+| `init.sh` | Runtime environment setup, software paths, Python/conda/venv setup, hook registration |
+| `utilities.sh` | Dataset-specific overrides for file naming, paths, or helper functions used by micapipe |
+| `params.sh` | Dataset-specific parameter choices |
+| `module_args.sh` | Profile-specific command-line flags for built-in modules |
+| `func_hooks.sh` | Profile-specific functional-processing hooks |
+| `dwi_hooks.sh` | Profile-specific diffusion-processing hooks |
+
+Not every profile needs every file.
+
+---
+
+## Running one module
+
+The single-subject launcher is:
+
+```bash
+tardiflab/scripts/run_micapipe_module.sh
+```
+
+Example:
+
+```bash
+/data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/run_micapipe_module.sh \
+  --config /data_/tardiflab/01_programs/micapipe-lab/tardiflab/scripts/micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --sub 01 \
+  --ses 1 \
+  --module volumetric
+```
+
+Useful options:
+
+```bash
+--dry-run
+```
+
+prints the command without running it.
+
+Additional arguments after `--` are passed through to micapipe:
+
+```bash
+run_micapipe_module.sh ... --module FC -- -someMicapipeFlag value
+```
+
+---
+
+## Running a module across subjects
+
+The batch launcher is:
+
+```bash
+tardiflab/scripts/run_micapipe_batch.sh
+```
+
+Example local run:
+
+```bash
+run_micapipe_batch.sh \
+  --config micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --module volumetric \
+  --mode local \
+  --subjects 01,02 \
+  --sessions 1
+```
+
+Example cluster run:
+
+```bash
+run_micapipe_batch.sh \
+  --config micapipe_lab_config.sh \
+  --profile ds-mwc \
+  --module volumetric \
+  --mode cluster \
+  --subjects 01,02,03 \
+  --sessions 1
+```
+
+If `--subjects` or `--sessions` are omitted, the batch runner can use profile defaults from `dataset.sh`.
+
+The user can override memory for a run:
+
+```bash
+--vmem 20
+```
+
+Profiles can also define per-module default memory values using a helper such as:
+
+```bash
+profile_default_vmem_for_module() {
+  case "$1" in
+    volumetric)      echo 12 ;;
+    proc_surf)       echo 6 ;;
+    post_structural) echo 6 ;;
+    dwi)             echo 25 ;;
+    FC)              echo 20 ;;
+    SC)              echo 50 ;;
+    *)               echo 8 ;;
+  esac
+}
+```
+
+A command-line `--vmem` value should take precedence over the profile default.
+
+---
+
+## Profile-specific module arguments
+
+`module_args.sh` lets a profile customize the flags used for a built-in logical module.
+
+For example, one dataset may have precomputed FreeSurfer outputs and want `proc_surf` to import them:
+
+```bash
+#!/usr/bin/env bash
+
+micapipe_profile_build_module_args() {
+  local module="$1"
+
+  case "${module}" in
+    proc_surf)
+      : "${SUBJECT_SURF_DIR:?ERROR: SUBJECT_SURF_DIR is not set}"
+      printf '%s\n' "-proc_surf" "-freesurfer" "-surf_dir" "${SUBJECT_SURF_DIR}"
+      ;;
+
+    FC)
+      printf '%s\n' "-proc_func" "-nocleanup" "-NSR" "-dropTR" "-tmpDir" "${MICAPIPE_TMP_ROOT}"
+      ;;
+
+    dwi)
+      printf '%s\n' "-dwi_upscale" "-proc_dwi"
+      ;;
+
+    *)
+      return 127
+      ;;
+  esac
+}
+```
+
+Return code `127` means: this profile does not override that module, so the runner should use the default module arguments.
+
+This keeps profile-specific flags out of the shared launcher logic.
+
+---
+
+## Overriding part of a built-in module with hooks
+
+Some dataset-specific changes are too specific to become default micapipe behavior, but still need to occur inside a built-in module. For those cases, the preferred pattern is a small **profile hook**.
+
+A hook is a profile-defined function that the shared module calls at a specific extension point.
+
+The shared module remains mostly unchanged. The profile decides whether to:
+
+- do nothing and let the built-in code run
+- print/debug what it would do
+- handle the step itself and tell the built-in module to skip the original block
+
+This pattern has already been implemented for functional ICA-FIX control and for DWI denoise/degibbs behavior (see code)
+
+### Return-code convention
+
+A useful convention is:
+
+| Return code | Meaning |
+|---|---|
+| `0` | Hook did not handle the step; continue with built-in behavior |
+| `11` | Hook handled the step; skip the built-in block |
+| other | Error |
+
+Other module-specific return codes can be added if needed, but keeping this small convention makes hooks easier to follow.
+
+---
+
+## Recipe: adding a profile hook to a built-in module
+
+This is the general pattern.
+
+### 1. Add environment variables in `init.sh`
+
+Register the hook file and define profile defaults:
+
+```bash
+PROFILE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+export MICAPIPE_PROFILE_DWI_HOOKS="${PROFILE_DIR}/dwi_hooks.sh"
+
+# Modes:
+#   default     -> built-in behavior
+#   debug       -> print diagnostics, then use built-in behavior
+#   lab_degibbs -> profile-specific DWI denoise/degibbs behavior
+export MICAPIPE_DWI_DENOISE_MODE="${MICAPIPE_DWI_DENOISE_MODE:-default}"
+
+# Dry-run is opt-in
+export MICAPIPE_DWI_HOOK_DRY_RUN="${MICAPIPE_DWI_HOOK_DRY_RUN:-0}"
+```
+
+### 2. Source the hook file in the built-in module
+
+Add this near the top of the module, after the profile/environment has been initialized:
+
+```bash
+if [[ -n "${MICAPIPE_PROFILE_DWI_HOOKS:-}" && -f "${MICAPIPE_PROFILE_DWI_HOOKS}" ]]; then
+  # shellcheck disable=SC1090
+  source "${MICAPIPE_PROFILE_DWI_HOOKS}"
+fi
+```
+
+### 3. Replace the target block with a hook call and fallback
+
+For a DWI denoise/degibbs block:
+
+```bash
+Info "DWI MP-PCA denoising and Gibbs ringing correction"
+
+profile_dwi_hook_rc=0
+
+if declare -f micapipe_profile_dwi_denoise_hook >/dev/null 2>&1; then
+  micapipe_profile_dwi_denoise_hook
+  profile_dwi_hook_rc=$?
+fi
+
+case "${profile_dwi_hook_rc}" in
+  0)
+    # Built-in micapipe behavior
+    dwi_dns_tmp="${tmp}/MP-PCA_dwi.mif"
+    Do_cmd dwidenoise "$dwi_cat" "$dwi_dns_tmp" -nthreads "$threads"
+    mrcalc "$dwi_cat" "$dwi_dns_tmp" -subtract - -nthreads "$threads" | mrmath - mean "$dwi_resPCA" -axis 3
+    Do_cmd mrdegibbs "$dwi_dns_tmp" "$dwi_dns" -nthreads "$threads"
+    mrcalc "$dwi_dns_tmp" "$dwi_dns" -subtract - -nthreads "$threads" | mrmath - mean "$dwi_resGibss" -axis 3
+    ;;
+  11)
+    Info "Profile handled DWI denoise/degibbs block"
+    ;;
+  *)
+    Error "Profile DWI denoise hook failed with code ${profile_dwi_hook_rc}"
+    exit 1
+    ;;
+esac
+```
+
+### 4. Put profile-specific logic in the hook file
+
+Example `dwi_hooks.sh` skeleton:
+
+```bash
+#!/usr/bin/env bash
+
+micapipe_profile_dwi_denoise_hook() {
+  local mode="${MICAPIPE_DWI_DENOISE_MODE:-default}"
+
+  case "${mode}" in
+    default)
+      return 0
+      ;;
+
+    debug)
+      Info "Profile DWI denoise hook active in DEBUG mode"
+      Info "dwi_cat  : ${dwi_cat:-unset}"
+      Info "dwi_dns  : ${dwi_dns:-unset}"
+      Info "tmp      : ${tmp:-unset}"
+      Info "threads  : ${threads:-unset}"
+      return 0
+      ;;
+
+    lab_degibbs)
+      Info "Profile DWI denoise hook active in LAB_DEGIBBS mode"
+
+      if [[ "${MICAPIPE_DWI_HOOK_DRY_RUN:-0}" -eq 1 ]]; then
+        Info "Dry-run enabled; printing intended commands only"
+        Info "Would run profile-specific DWI denoise/degibbs branch"
+        return 0
+      fi
+
+      # Profile-specific commands go here.
+      # If this branch produces the outputs expected by the rest of the module,
+      # return 11 so the built-in block is skipped.
+
+      return 11
+      ;;
+
+    *)
+      Error "Unknown MICAPIPE_DWI_DENOISE_MODE: ${mode}"
+      return 1
+      ;;
+  esac
+}
+```
+
+### 5. Test in stages
+
+A staged test sequence is usually safest:
+
+1. `default` mode  
+   Confirm the built-in module still runs normally.
+
+2. `debug` mode  
+   Confirm the hook is sourced and can see required module variables.
+
+3. `dry-run` mode for the custom branch  
+   Confirm paths and intended commands without skipping built-in behavior.
+
+4. real custom mode  
+   Run the profile-specific commands and return `11`.
+
+Example:
+
+```bash
+MICAPIPE_DWI_DENOISE_MODE=debug run_micapipe_module.sh ... --module dwi
+```
+
+```bash
+MICAPIPE_DWI_DENOISE_MODE=lab_degibbs \
+MICAPIPE_DWI_HOOK_DRY_RUN=1 \
+run_micapipe_module.sh ... --module dwi
+```
+
+```bash
+MICAPIPE_DWI_DENOISE_MODE=lab_degibbs \
+MICAPIPE_DWI_HOOK_DRY_RUN=0 \
+run_micapipe_module.sh ... --module dwi
+```
+
+---
+
+## Environment-variable overrides
+
+Profiles can use environment variables to control hook behavior. This is useful when the same module needs to run in different modes across different passes.
+
+For example:
+
+```bash
+MICAPIPE_FUNC_FIX_MODE=stop_at_fix run_micapipe_module.sh ... --module FC
+```
+
+or:
+
+```bash
+MICAPIPE_DWI_DENOISE_MODE=lab_degibbs run_micapipe_module.sh ... --module dwi
+```
+
+When running through a batch/cluster launcher, environment-variable forwarding needs to be handled deliberately. One useful pattern is a repeatable batch option such as:
+
+```bash
+--env MICAPIPE_DWI_DENOISE_MODE=lab_degibbs
+--env MICAPIPE_DWI_HOOK_DRY_RUN=0
+```
+
+This allows profile behavior to be controlled per run without hard-coding one mode into `init.sh`.
+
+---
+
+## Functional-processing hook example
+
+The functional module can use hooks to support custom ICA-FIX workflows.
+
+Example modes:
+
+| Mode | Purpose |
+|---|---|
+| `default` | Use built-in micapipe behavior |
+| `stop_at_fix` | Run preprocessing through MELODIC, then stop for manual IC labeling/classifier training |
+| `manual_ic_remove` | Reuse an existing ICA workspace and apply manually selected IC removal |
+
+A profile can register:
+
+```bash
+export MICAPIPE_PROFILE_FUNC_HOOKS="${PROFILE_DIR}/func_hooks.sh"
+export MICAPIPE_FUNC_FIX_MODE="${MICAPIPE_FUNC_FIX_MODE:-default}"
+export MICAPIPE_FUNC_STABLE_TMP="${MICAPIPE_FUNC_STABLE_TMP:-1}"
+export MICAPIPE_FUNC_RESET_TMP="${MICAPIPE_FUNC_RESET_TMP:-0}"
+```
+
+The functional hook can then decide whether to:
+
+- continue with built-in FIX behavior
+- stop before FIX
+- complete manual IC removal and skip the built-in FIX block
+
+For workflows that stop and resume around ICA-FIX, a stable functional temporary directory can help preserve MELODIC outputs across runs.
+
+---
+
+## DWI hook example
+
+The DWI module can use a hook around MP-PCA denoising and Gibbs correction.
+
+Example modes:
+
+| Mode | Purpose |
+|---|---|
+| `default` | Use built-in micapipe behavior |
+| `debug` | Print relevant variables, then run built-in behavior |
+| `lab_degibbs` | Use a profile-specific denoise/degibbs branch |
+
+Example profile variables:
+
+```bash
+export MICAPIPE_PROFILE_DWI_HOOKS="${PROFILE_DIR}/dwi_hooks.sh"
+export MICAPIPE_DWI_DENOISE_MODE="${MICAPIPE_DWI_DENOISE_MODE:-default}"
+export MICAPIPE_DWI_HOOK_DRY_RUN="${MICAPIPE_DWI_HOOK_DRY_RUN:-0}"
+export MICAPIPE_DWI_RPG_DEGIBBS_DIR="${MICAPIPE}/tardiflab/scripts/01_processing/rpg_degibbs"
+export MICAPIPE_DWI_PARTIAL_FOURIER_FACTOR="${MICAPIPE_DWI_PARTIAL_FOURIER_FACTOR:-6/8}"
+```
+
+The DWI hook can inspect:
+
+```bash
+mrinfo "$dwi_cat" -property PartialFourier
+```
+
+and choose between a standard `mrdegibbs` branch and a profile-specific branch.
+
+---
+
+## Creating a new dataset profile
+
+A useful starting point is:
+
+```bash
+mkdir -p tardiflab/profiles/ds-new
+touch tardiflab/profiles/ds-new/dataset.sh
+touch tardiflab/profiles/ds-new/init.sh
+touch tardiflab/profiles/ds-new/module_args.sh
+touch tardiflab/profiles/ds-new/params.sh
+touch tardiflab/profiles/ds-new/utilities.sh
+```
+
+Start with the minimum needed files. Additional hook files can be added later.
+
+A minimal `dataset.sh` might define:
+
+```bash
+export BIDS_DIR="/path/to/bids"
+export OUT_DIR="/path/to/bids/derivatives/micapipe-lab"
+export LOG_DIR="${OUT_DIR}/logs"
+
+DEFAULT_SUBJECTS=(01 02 03)
+DEFAULT_SESSIONS=(1)
+```
+
+A minimal `init.sh` might define software paths, virtual environments, and hook registrations.
+
+A minimal `module_args.sh` can return `127` for modules it does not override.
+
+---
+
+## Development and execution
+
+It is useful to distinguish between development and execution.
 
 ### Development
 
-Development includes:
+Development may include:
 
 - modifying code
-- creating commits
-- pushing changes to GitHub
-- merging upstream updates
 - creating or updating profiles
+- adding hook points
+- testing new profile behavior
+- committing changes
+- syncing with upstream micapipe
 
-Development should be done by individual users using:
-
-- their **own GitHub accounts**
-- their **own SSH keys**
-- personal development clones where practical
+Development is usually clearer when done in personal or feature-specific clones/branches where possible.
 
 ### Execution
 
 Execution includes:
 
-- running pipeline jobs on datasets
-- pulling updates from the lab repository
-- selecting a dataset profile
+- running pipeline modules
+- submitting jobs
 - generating derivatives
+- pulling tested updates from the lab repository
 
-Execution is typically performed using a shared or local clone of `micapipe-lab`, and is generally **pull-only**.
-
-Dataset-specific behavior should be controlled by **profiles**, not by maintaining separate copies of the pipeline per dataset.
+A shared checkout on the server can be useful as a stable execution copy.
 
 ---
 
-## Authentication & Repository Usage
+## GitHub authentication
 
-All GitHub interactions for this repository use **SSH-based authentication**.
+GitHub interactions for this repository use SSH-based authentication.
 
-### Authentication
+Each person who pushes changes should use their own GitHub account and SSH key, so commits remain attributable.
 
-- No shared lab GitHub account is used
-- No shared password or shared personal access token is used
-- Pushes are attributable to individual users
-- Access is managed through GitHub repository permissions
-
-### Developer requirements
-
-Each developer who needs push access should:
-
-1. Have a GitHub account with appropriate access to `TardifLab/micapipe-lab`
-2. Have an SSH key configured on the server or development machine they use
-3. Add the corresponding public key to their GitHub account
-4. Confirm that SSH authentication works before pushing
-
-### Testing SSH authentication
-
-To test GitHub SSH authentication:
+Test SSH authentication with:
 
 ```bash
 ssh -T git@github.com
@@ -97,20 +602,18 @@ Expected response:
 Hi <username>! You've successfully authenticated, but GitHub does not provide shell access.
 ```
 
-### SSH configuration notes
-
-Some users may have multiple SSH keys on the lab server. In that case, the appropriate key should be selected via `~/.ssh/config`.
+If multiple SSH keys are present on the same server, `~/.ssh/config` can be used to select the appropriate key.
 
 ---
 
-## Repository Remotes
+## Repository remotes
 
-This repository should be configured with two Git remotes:
+A useful remote setup is:
 
 - `origin` → the Tardiflab repository
 - `upstream` → the official micapipe repository
 
-Example:
+Check with:
 
 ```bash
 git remote -v
@@ -125,344 +628,119 @@ upstream git@github.com:MICA-MNI/micapipe.git (fetch)
 upstream git@github.com:MICA-MNI/micapipe.git (push)
 ```
 
-This allows the lab to maintain its own canonical fork while continuing to synchronize with the official micapipe codebase.
+This lets the lab maintain its own fork while still syncing useful upstream changes.
 
 ---
 
-## Running micapipe with Profiles
+## Syncing with upstream micapipe
 
-This lab version of micapipe is intended to support multiple datasets through **profiles**.
-
-Each profile defines dataset-specific configuration while using a shared core pipeline.
-
-### Basic usage
-
-To run micapipe, specify the dataset profile using the `MICAPIPE_PROFILE` environment variable:
-
-```bash
-MICAPIPE_PROFILE=dsA ./micapipe.sh <arguments>
-```
-
-Example:
-
-```bash
-MICAPIPE_PROFILE=dsA ./micapipe.sh sub-001
-```
-
-### Profile location
-
-Profiles are intended to live in:
-
-```text
-tardiflab/profiles/
-```
-
-Each dataset should have its own profile directory, for example:
-
-```text
-tardiflab/profiles/dsA/
-tardiflab/profiles/dsB/
-tardiflab/profiles/dsC/
-```
-
-### Typical profile contents
-
-A profile may contain some or all of the following files:
-
-- `init.sh` — environment setup, modules, conda environments, shared paths
-- `utilities.sh` — dataset-specific file layout and naming logic
-- `registration.sh` — dataset-specific registration functions or method definitions
-- `params.sh` — dataset-specific parameters or method selections
-- additional helper scripts if needed for that dataset
-
-### Key idea
-
-- The **core pipeline remains shared**
-- Dataset-specific behavior is controlled by the **selected profile**
-- New datasets should generally be added by creating a new profile, not by copying the pipeline
-
----
-
-## Example Repository Structure
-
-An example layout for `micapipe-lab` is:
-
-```text
-micapipe-lab/
-├── micapipe.sh/
-├── core/ <upstream micapipe files and folders>
-├── tardiflab/
-│   ├── README.md
-│   ├── docs/
-│   ├── lab_ext/
-│   ├── profiles/
-│   │   ├── dsA/
-│   │   │   ├── init.sh
-│   │   │   ├── utilities.sh
-│   │   │   ├── registration.sh
-│   │   │   └── params.sh
-│   │   ├── dsB/
-│   │   └── dsC/
-│   ├── scripts/
-│   └── templates/
-```
-
-### Role of each area
-
-- `core/`  
-  Shared pipeline logic and generic extension points
-
-- `profiles/`  
-  Dataset-specific configuration and overrides
-
-- `lab_ext/`  
-  Lab-specific shared methods or experimental functionality that may not belong in the upstream core
-
-- `docs/`  
-  Internal lab documentation, migration notes, and usage examples
-
----
-
-## Core vs. Profile Responsibilities
-
-A useful rule of thumb:
-
-### Put logic in the **core** when:
-
-- it is shared across multiple datasets
-- it represents a general pipeline feature
-- it provides a reusable extension point
-- it is likely to remain useful as the lab evolves
-- it could plausibly be upstreamed later
-
-Examples:
-
-- wrapper functions for major processing steps
-- generic method dispatch
-- common QC utilities
-- stable interfaces used by multiple profiles
-
-### Put logic in a **profile** when:
-
-- it is only relevant to one dataset
-- it reflects acquisition-specific processing choices
-- it handles dataset-specific paths or naming quirks
-- it selects among existing methods
-- it provides dataset-specific parameters
-
-Examples:
-
-- BIDS root paths
-- dataset-specific module/environment loading
-- registration parameter choices
-- file naming overrides
-- method selections for one project
-
-### Put logic in **lab_ext/** when:
-
-- it is useful across multiple datasets in the lab
-- it is not part of upstream micapipe
-- it may still be too experimental or specialized to place directly in the shared core
-
----
-
-## Syncing with Upstream micapipe
-
-This repository is a **lab-maintained fork** of the official micapipe repository.
-
-### Check remotes
-
-```bash
-git remote -v
-```
-
-### Fetch latest upstream changes
+To fetch upstream changes:
 
 ```bash
 git fetch upstream
 ```
 
-### Merge upstream into the lab branch
+To merge upstream into the lab branch:
 
 ```bash
 git checkout main
 git merge upstream/main
 ```
 
-Alternatively, advanced users may prefer:
+Some users may prefer a rebase workflow:
 
 ```bash
 git rebase upstream/main
 ```
 
-### Handling conflicts
+If conflicts occur:
 
-If upstream changes overlap with lab modifications, Git may report merge conflicts.
-
-In that case:
-
-1. Open the affected files
-2. Review the conflicting changes
-3. Resolve the conflict manually
-4. Stage the resolved files:
+1. open the affected files
+2. compare the upstream and lab changes
+3. preserve any needed lab extension points or profile hooks
+4. stage resolved files
 
 ```bash
 git add <file>
 ```
 
-5. Complete the merge:
+5. complete the merge or rebase
 
 ```bash
 git commit
 ```
 
-### Important notes when syncing
-
-- Core pipeline modifications should be kept **minimal and generic**
-- Most lab-specific behavior should live in `config/profiles/`
-- When resolving conflicts:
-  - preserve **lab extension points** such as wrapper functions and hooks
-  - incorporate **useful upstream improvements** into the lab defaults where appropriate
-
-### Recommended workflow
-
-- sync with upstream **regularly**
-- avoid letting the lab fork drift too far
-- test on a small example dataset after syncing
-- push the updated lab branch to GitHub:
+or, during a rebase:
 
 ```bash
-git push origin main
+git rebase --continue
+```
+
+After syncing, test a small representative case before running a full dataset.
+
+---
+
+## Git workflow
+
+A practical development workflow is:
+
+```bash
+git checkout -b feature/short-description
+```
+
+Make and test changes, then:
+
+```bash
+git status
+git diff
+git add <files>
+git commit -m "Short description of change"
+git push origin feature/short-description
+```
+
+Focused commits are easier to review and easier to undo later.
+
+Useful review commands:
+
+```bash
+git status
+git diff --stat
+git diff path/to/file
+git diff --cached
+```
+
+Interactive staging can help separate unrelated edits:
+
+```bash
+git add -p
 ```
 
 ---
 
-## Creating a New Dataset Profile
+## Migration notes
 
-When onboarding a new dataset, the default approach should be:
+This repository was established while some project-specific micapipe variants already existed.
 
-- **do not copy the entire pipeline**
-- create a **new profile** instead
+A practical migration strategy is:
 
-### Suggested steps
-
-1. Create a new profile directory:
-
-```bash
-mkdir -p config/profiles/dsNew
-```
-
-2. Add the initial files you need, such as:
-
-- `init.sh`
-- `utilities.sh`
-- `registration.sh`
-- `params.sh`
-
-3. Define the dataset-specific settings:
-
-- root paths
-- environment/module setup
-- naming conventions
-- processing choices
-- method selections
-- registration behavior
-
-4. Test the dataset using the shared core and the new profile
-
-5. Keep dataset-specific logic inside the profile unless there is a strong reason to generalize it
-
-### Recommendation
-
-When adding a new dataset, start by keeping things local to the profile. Move logic into the shared core only if it proves reusable across datasets.
-
----
-
-## Migration Strategy
-
-This repository is being established while several project-specific micapipe variants still exist.
-
-The recommended migration path is:
-
-1. preserve the existing project-specific version 
-2. ensure `micapipe-lab` is stable
-3. For this migration target, identify:
-   - shared logic that belongs in the core
-   - dataset-specific logic that belongs in a profile
-   - one-off hacks that should be retired
-4. create the working profile
+1. preserve the previous project-specific version for reference
+2. create a profile in `micapipe-lab`
+3. move dataset-specific paths and choices into the profile
+4. add small generic hook points only where needed
 5. compare outputs against the legacy pipeline
+6. document known differences
+
+This keeps the legacy workflow available while making the new shared version easier to maintain.
 
 ---
 
-## Recommended Git Workflow for Lab Development
+## Possible future additions
 
-A practical workflow for developers is:
+Helpful future documentation could include:
 
-1. Clone `micapipe-lab`
-2. Create a feature branch
-3. Make changes
-4. Test on a small representative case
-5. Commit and push
-6. Open a pull request or merge into the lab main branch according to lab practice
-
-Example:
-
-```bash
-git checkout -b feature/profile-dsA
-```
-
-After development:
-
-```bash
-git add .
-git commit -m "Add initial dsA profile structure"
-git push origin feature/profile-dsA
-```
-
-Recommended practice:
-
-- use short-lived feature branches
-- keep commits focused
-- avoid long-lived project-specific branches
-- merge back into the shared lab branch regularly
-
----
-
-## Shared Installation vs. Personal Clones
-
-It is useful to distinguish between:
-
-### The central lab repository
-
-The GitHub repository `TardifLab/micapipe-lab` is the lab’s source of truth.
-
-### Shared installation on the server
-
-A shared checkout on the lab server may be used for running jobs, for example:
-
-```text
-/data_/tardiflab/01_programs/micapipe-lab
-```
-
-This location should generally be treated as a **stable execution copy**, not the primary place for experimental development.
-
-### Personal development clones
-
-Developers may also keep personal clones in their own workspace for making changes, testing, and pushing updates.
-
-This model helps separate:
-
-- stable execution
-- active development
-- repository governance
-
----
-
-## Possible Future Additions
-
-- exact profile-loading syntax
 - profile templates
-- coding conventions for lab extensions
-- testing/checklist for syncing with upstream
-- instructions for submitting generic improvements back upstream
+- module-specific hook examples
+- cluster submission examples
+- expected software environments
+- testing checklists for each module
+- notes on when a profile hook should become a shared core feature
